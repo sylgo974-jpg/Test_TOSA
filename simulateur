@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulateur de parcours Tosa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1A3A5C; --teal:#4A90A4; --amber:#F5A623;
+    --bg:#F6F8FA; --card:#FFFFFF; --text:#1D2733; --muted:#5B6878; --line:#D6DEE6;
+    --ok:#2E8B57; --soft-teal:#E8F2F5; --soft-amber:#FFF6E6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Nunito Sans",Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+  header{background:var(--navy);color:#fff;padding:28px 16px 32px}
+  .wrap{max-width:860px;margin:0 auto;padding:0 16px}
+  header h1{margin:0 0 6px;font-size:1.7rem;font-weight:800}
+  header p{margin:0;opacity:.85}
+  main{padding:24px 0 48px}
+  h2{color:var(--navy);font-size:1.2rem;margin:0 0 12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px}
+
+  /* Mode d'emploi */
+  .steps{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+  .steps li{display:flex;gap:12px;align-items:flex-start}
+  .num{flex:0 0 30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;display:grid;place-items:center}
+  .btn-link{display:inline-block;margin-top:6px;background:var(--teal);color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-weight:600}
+  .btn-link:hover{background:var(--navy)}
+  .tests{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .tests .btn-link{margin-top:0}
+  .t-excel{background:#217346} .t-word{background:#2B579A} .t-ppt{background:#B7472A}
+  .tests .btn-link:hover{background:var(--navy)}
+  @media (max-width:640px){.tests .btn-link{flex:1 1 100%;text-align:center}}
+
+  /* Rectangle de saisie */
+  .saisie{border:3px solid var(--amber);background:var(--soft-amber)}
+  .saisie h2{display:flex;align-items:center;gap:8px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media (max-width:640px){.grid{grid-template-columns:1fr}}
+  label{display:block;font-weight:700;color:var(--navy);margin-bottom:6px}
+  input,select{width:100%;font:inherit;font-size:1.05rem;padding:10px 12px;border:2px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
+  input:focus,select:focus{outline:none;border-color:var(--teal)}
+  .hint{font-size:.85rem;color:var(--muted);margin-top:4px}
+  .go{margin-top:16px;width:100%;font:inherit;font-weight:800;font-size:1.1rem;padding:14px;border:0;border-radius:10px;background:var(--navy);color:#fff;cursor:pointer}
+  .go:hover{background:var(--teal)}
+  .err{color:#B3261E;font-weight:700;margin-top:10px;min-height:1.2em}
+
+  /* Résultat */
+  #resultat{display:none}
+  .jauge{position:relative;height:18px;border-radius:9px;background:linear-gradient(90deg,#C9D3DC 0 35%,#9FB6C6 35% 55%,#7FB9A0 55% 72.5%,#F5C76B 72.5% 87.5%,#E59A5A 87.5% 100%);margin:28px 0 8px}
+  .mark{position:absolute;top:-26px;transform:translateX(-50%);font-size:.8rem;font-weight:800;white-space:nowrap}
+  .mark::after{content:"";position:absolute;left:50%;top:20px;width:3px;height:24px;background:currentColor;transform:translateX(-50%)}
+  .mark.you{color:var(--navy)} .mark.goal{color:#B86E00;top:auto;bottom:-26px}
+  .mark.goal::after{top:auto;bottom:20px}
+  .mark.edge-l{transform:translateX(-4px)} .mark.edge-r{transform:translateX(calc(-100% + 4px))}
+  .mark.edge-l::after{left:4px} .mark.edge-r::after{left:auto;right:4px}
+  .jauge + .labels{margin-top:30px}
+  @media (max-width:640px){.labels span.sm-hide{display:none}}
+  .labels{position:relative;height:1.2em;font-size:.75rem;color:var(--muted)}
+  .labels span{position:absolute;transform:translateX(-50%)}
+  .labels span:first-child{transform:none} .labels span:last-child{transform:translateX(-100%)}
+  .resume{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+  @media (max-width:640px){.resume{grid-template-columns:1fr}}
+  .stat{border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
+  .stat b{display:block;font-size:1.6rem;color:var(--navy)}
+  .stat span{font-size:.85rem;color:var(--muted)}
+  .parcours{list-style:none;padding:0;margin:0}
+  .parcours li{display:flex;gap:14px;align-items:center;border-left:4px solid var(--teal);background:var(--soft-teal);padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:8px}
+  .parcours li.opt{border-left-color:var(--amber);background:var(--soft-amber)}
+  .parcours .j{flex:0 0 auto;font-weight:800;color:var(--navy);min-width:52px}
+  .parcours .t{font-weight:700}
+  .parcours .d{font-size:.9rem;color:var(--muted)}
+  .bravo{margin-top:18px;border:2px solid var(--teal);border-radius:10px;padding:14px 16px;font-size:1.05rem}
+  .bravo strong{color:var(--navy)}
+  .note{font-size:.85rem;color:var(--muted);margin-top:14px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .actions button{font:inherit;font-weight:700;padding:9px 14px;border-radius:8px;border:2px solid var(--navy);background:#fff;color:var(--navy);cursor:pointer}
+  footer{text-align:center;color:var(--muted);font-size:.85rem;padding:20px 16px 32px}
+  @media print{header,.mode,.saisie,.actions,footer{display:none} body{background:#fff} .card{border:1px solid #999}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Simulateur de parcours Tosa</h1>
+    <p>Excel · Word · PowerPoint — trouvez les modules qui vous mènent à votre objectif.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="card mode" aria-labelledby="mode-titre">
+    <h2 id="mode-titre">Mode d'emploi</h2>
+    <ol class="steps">
+      <li><span class="num">1</span><div>Choisissez votre logiciel et passez le test de positionnement Tosa gratuit. Il dure environ 40 minutes.
+        <!-- LIENS DES TESTS ISOGRAD : modifier ici l'adresse de chaque logiciel -->
+        <div class="tests">
+          <a class="btn-link t-excel" href="https://app.isograd.com/runtest/NonQuestion/1" target="_blank" rel="noopener">📊 Test Excel ↗</a>
+          <a class="btn-link t-word"  href="https://app.isograd.com/runtest/NonQuestion/1" target="_blank" rel="noopener">📝 Test Word ↗</a>
+          <a class="btn-link t-ppt"   href="https://app.isograd.com/runtest/NonQuestion/1" target="_blank" rel="noopener">📽️ Test PowerPoint ↗</a>
+        </div></div></li>
+      <li><span class="num">2</span><div>À la fin du test, notez votre <strong>score précis</strong> (un nombre entre 1 et 1 000).</div></li>
+      <li><span class="num">3</span><div>Revenez ici. Remplissez le <strong>cadre orange</strong> : logiciel, score, objectif.</div></li>
+      <li><span class="num">4</span><div>Cliquez sur <strong>« Voir mon parcours »</strong>. Vous voyez vos modules et le nombre de jours.</div></li>
+      <li><span class="num">5</span><div>Imprimez ou montrez le résultat à votre formateur.</div></li>
+    </ol>
+  </section>
+
+  <section class="card saisie" aria-labelledby="saisie-titre">
+    <h2 id="saisie-titre">✏️ Mes informations</h2>
+    <div class="grid">
+      <div>
+        <label for="logiciel">Logiciel</label>
+        <select id="logiciel">
+          <option value="Excel">Excel</option>
+          <option value="Word">Word</option>
+          <option value="PowerPoint">PowerPoint</option>
+        </select>
+      </div>
+      <div>
+        <label for="score">Mon score au test</label>
+        <input id="score" type="number" min="1" max="1000" inputmode="numeric" placeholder="ex. 420">
+        <div class="hint">Entre 1 et 1 000</div>
+      </div>
+      <div>
+        <label for="objectif">Mon objectif</label>
+        <select id="objectif">
+          <option value="3">Niveau 3 · Opérationnel (551+)</option>
+          <option value="4">Niveau 4 · Avancé (726+)</option>
+          <option value="5">Niveau 5 · Expert (876+)</option>
+        </select>
+      </div>
+    </div>
+    <button class="go" id="go" type="button">Voir mon parcours</button>
+    <div class="err" id="err" role="alert"></div>
+  </section>
+
+  <section class="card" id="resultat" aria-live="polite">
+    <h2 id="res-titre">Mon parcours</h2>
+    <div class="jauge" aria-hidden="true">
+      <span class="mark you" id="m-you">Moi</span>
+      <span class="mark goal" id="m-goal">Objectif</span>
+    </div>
+    <div class="labels"><span style="left:0">1</span><span style="left:35%" class="sm-hide">350</span><span style="left:55%">550</span><span style="left:72.5%">725</span><span style="left:87.5%" class="sm-hide">875</span><span style="left:100%">1000</span></div>
+
+    <div class="resume">
+      <div class="stat"><b id="s-niveau">—</b><span>Mon niveau aujourd'hui</span></div>
+      <div class="stat"><b id="s-objectif">—</b><span>Mon objectif</span></div>
+      <div class="stat"><b id="s-jours">—</b><span>Jours de formation</span></div>
+    </div>
+
+    <ul class="parcours" id="parcours"></ul>
+    <div class="bravo" id="bravo"></div>
+    <p class="note">Simulation indicative. La durée définitive est fixée avec votre formateur. Pour Word et PowerPoint, le parcours peut être un peu plus court.</p>
+    <div class="actions">
+      <button type="button" onclick="window.print()">🖨️ Imprimer</button>
+      <button type="button" id="reset">↺ Nouvelle simulation</button>
+    </div>
+  </section>
+</main>
+
+<footer>Simulateur de parcours Tosa · Formations bureautiques certifiantes · La Réunion</footer>
+
+<script id="logique">
+// ---- Données ----
+const NIVEAUX = [
+  {n:1, nom:"Initial",      min:1,   max:350},
+  {n:2, nom:"Basique",      min:351, max:550},
+  {n:3, nom:"Opérationnel", min:551, max:725},
+  {n:4, nom:"Avancé",       min:726, max:875},
+  {n:5, nom:"Expert",       min:876, max:1000}
+];
+const SEUIL = {3:551, 4:726, 5:876};
+
+const MOD = {
+  J0:  {t:"J0 · Prise en main",          j:1, d:"Découvrir l'ordinateur et le logiciel, à son rythme"},
+  M1:  {t:"M1 · Les bases",              j:2, d:"Créer, mettre en forme et enregistrer un document simple"},
+  M1b: {t:"M1 · Les bases (jour 2)",     j:1, d:"Revoir les points faibles des bases"},
+  M2a: {t:"M2a · Niveau 3 consolidé",    j:1, d:"Produire seul un document professionnel complet"},
+  M2b: {t:"M2b · Fondamentaux niveau 4", j:2, d:"Analyser, automatiser, fiabiliser son travail"},
+  M3:  {t:"M3 · Niveau 4 + cas métier",  j:2, d:"Construire un outil complet pour son métier, test blanc"},
+  N5:  {t:"N5 · Expert",                 j:2, d:"Automatiser et industrialiser ses outils"}
+};
+
+// Parcours par tranche de score d'entrée et par objectif.
+// "opt" = module conseillé mais non obligatoire.
+const GRILLE = [
+  {min:1,   max:199, 3:["J0","M1","M2a"],      4:["J0","M1","M2a","M2b","M3"],      5:["J0","M1","M2a","M2b","M3","N5"]},
+  {min:200, max:450, 3:["M1","M2a"],           4:["M1","M2a","M2b","M3"],           5:["M1","M2a","M2b","M3","N5"]},
+  {min:451, max:550, 3:["M1b","M2a"],          4:["M1b","M2a","M2b","M3"],          5:["M1b","M2a","M2b","M3","N5"]},
+  {min:551, max:650, 3:["opt:M2a"],            4:["M2a","M2b","M3"],                5:["M2a","M2b","M3","N5"]},
+  {min:651, max:725, 3:[],                     4:["M2b","opt:M3"],                  5:["M2b","M3","N5"]},
+  {min:726, max:800, 3:[],                     4:["opt:M3"],                        5:["M3","N5"]},
+  {min:801, max:875, 3:[],                     4:[],                                5:["N5"]},
+  {min:876, max:1000,3:[],                     4:[],                                5:[]}
+];
+
+function niveauDe(score){ return NIVEAUX.find(x => score>=x.min && score<=x.max); }
+
+function simuler(score, objectif){
+  const tranche = GRILLE.find(g => score>=g.min && score<=g.max);
+  const liste = (tranche[objectif] || []).map(code => {
+    const opt = code.startsWith("opt:");
+    const m = MOD[opt ? code.slice(4) : code];
+    return {...m, opt};
+  });
+  const jOblig = liste.filter(m => !m.opt).reduce((s,m)=>s+m.j,0);
+  const jOpt   = liste.filter(m =>  m.opt).reduce((s,m)=>s+m.j,0);
+  return {liste, jOblig, jOpt, atteint: score >= SEUIL[objectif]};
+}
+</script>
+
+<script>
+const $ = id => document.getElementById(id);
+const pos = s => Math.min(100, Math.max(0, (s/1000)*100));
+
+const PHRASES = {
+  depart:  "Chaque expert a commencé par un premier clic. <strong>Vous avez fait le plus dur : vous savez où vous en êtes.</strong> La formation va vous faire progresser pas à pas.",
+  proche:  "Vous êtes tout près du but. <strong>Quelques jours suffisent pour franchir le palier</strong> et le faire reconnaître par une certification.",
+  loin:    "L'objectif est ambitieux, et il est atteignable. <strong>Un module après l'autre, chaque journée vous rapproche du niveau visé.</strong>",
+  atteint: "Bravo, votre niveau est déjà atteint ! <strong>Faites-le reconnaître : passez la certification</strong>, ou visez le niveau suivant."
+};
+
+function afficher(){
+  const score = parseInt($("score").value, 10);
+  const objectif = parseInt($("objectif").value, 10);
+  const logiciel = $("logiciel").value;
+  $("err").textContent = "";
+  if (isNaN(score) || score < 1 || score > 1000){
+    $("err").textContent = "Entrez un score entre 1 et 1 000.";
+    $("score").focus(); return;
+  }
+  const niv = niveauDe(score);
+  const r = simuler(score, objectif);
+
+  $("res-titre").textContent = `Mon parcours ${logiciel}`;
+  $("s-niveau").textContent = `N${niv.n} · ${niv.nom}`;
+  $("s-objectif").textContent = `N${objectif} · ${NIVEAUX[objectif-1].nom}`;
+  $("s-jours").textContent = r.jOblig === 0
+    ? (r.jOpt ? `0 (+${r.jOpt} conseillé${r.jOpt>1?"s":""})` : "0")
+    : (r.jOpt ? `${r.jOblig} à ${r.jOblig + r.jOpt}` : `${r.jOblig}`);
+
+  const placer = (el, val, txt) => {
+    const p = pos(val);
+    el.style.left = p + "%"; el.textContent = txt;
+    el.classList.toggle("edge-l", p < 12);
+    el.classList.toggle("edge-r", p > 88);
+  };
+  placer($("m-you"), score, `Moi : ${score}`);
+  placer($("m-goal"), SEUIL[objectif], `Objectif : ${SEUIL[objectif]}`);
+
+  const ul = $("parcours"); ul.innerHTML = "";
+  let n = 0;
+  r.liste.forEach(m => {
+    const li = document.createElement("li");
+    if (m.opt) li.className = "opt";
+    li.innerHTML = `<span class="j">${m.j} j</span><div><div class="t">${m.t}${m.opt ? " — conseillé" : ""}</div><div class="d">${m.d}</div></div>`;
+    ul.appendChild(li); n++;
+  });
+  const cert = document.createElement("li");
+  cert.className = "opt";
+  cert.innerHTML = `<span class="j">🎓</span><div><div class="t">Certification Tosa ${logiciel}</div><div class="d">Examen de 60 minutes, sans pause. Score sur 1 000 pour votre CV.</div></div>`;
+  ul.appendChild(cert);
+
+  const ecart = SEUIL[objectif] - score;
+  $("bravo").innerHTML = r.atteint ? PHRASES.atteint
+    : (score < 351 ? PHRASES.depart : (ecart <= 150 ? PHRASES.proche : PHRASES.loin));
+
+  $("resultat").style.display = "block";
+  $("resultat").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+$("go").addEventListener("click", afficher);
+$("score").addEventListener("keydown", e => { if (e.key === "Enter") afficher(); });
+$("reset").addEventListener("click", () => {
+  $("resultat").style.display = "none"; $("score").value = ""; $("score").focus();
+  window.scrollTo({top:0, behavior:"smooth"});
+});
+</script>
+</body>
+</html>
